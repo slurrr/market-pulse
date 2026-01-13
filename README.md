@@ -1,12 +1,92 @@
-MAXIMAL FREEDOM AGENT BUILD EXPERIMENT
+# Market Pulse — Throwaway Experiment
 
-Purpose
+This repository is a **throwaway-first experiment** to build a real-time crypto **market pulse dashboard**.
 
-market-pulse exists to answer one question, continuously and coherently:
+It is not a scanner, not a signal engine, not a trading system, and not a long-term codebase.
 
-What is the market doing right now, why is it doing it, and is it worth acting on?
+The goal is to collapse inference from many disparate data sources into a single situational awareness view that helps a human trader understand **what the market is doing right now**.
 
-The system is not a signal generator, not a strategy, and not a prediction engine in isolation.
-It is a situational awareness engine designed to compress massive, multi-source market information into a small number of high-confidence, high-signal judgments.
+This repo is expected to be deleted.
 
-Silence is acceptable. False confidence is not.
+---
+
+## How to Work in This Repo (Read This First)
+
+1. **Read `vision.md` before doing anything else**
+   - It defines intent, constraints, and non-goals.
+   - The question list is inspiration, not a requirements checklist.
+
+2. **Optimize for usefulness now**
+   - Correctness, elegance, and architecture are secondary.
+   - False positives are costly. Silence is acceptable.
+
+3. **You are free to invent structure**
+   - No frozen architecture.
+   - No frozen interfaces.
+   - No premature invariants.
+   - If something hurts to change, change it anyway.
+
+4. **Prefer implementation over discussion**
+   - If unsure, build it and observe.
+   - Visuals > abstractions.
+   - Ratios, comparisons, and deltas > raw numbers.
+
+5. **Delete aggressively**
+   - If something does not improve situational awareness, remove it.
+   - Deletion is progress.
+
+---
+
+## Artifact Discipline (Critical)
+
+Artifacts exist to preserve **learning**, not structure.
+
+When you make a meaningful decision, discovery, or observation, write it down.
+
+Use these files only when needed:
+
+- `decisions.md`
+  - Append-only
+  - Why a choice was made, not how it was implemented
+
+- `dashboard_notes.md`
+  - What feels useful, misleading, noisy, or surprising
+  - Human-facing observations
+
+- `data_sources.md`
+  - What data feeds actually mattered in practice
+
+- `candidate_invariants.md`
+  - Patterns that *keep reappearing*
+  - Observational only — **do not enforce**
+
+Do **not** create:
+- task lists
+- roadmaps
+- architecture diagrams
+- specs
+- long plans
+
+---
+
+## Session Reset Rules
+
+At the start of a new session:
+
+1. Read:
+   - `vision.md`
+   - `README.md`
+   - `decisions.md` (if it exists)
+
+2. State briefly (1 paragraph):
+   - Your understanding of the project
+   - What you are about to work on
+
+3. Load **only** the context needed for the current task.
+
+---
+
+## Ground Rules
+
+- This is an observational dashboard, not a prescriptive system.
+- Showing tension, imbalance, and disagreement is va
