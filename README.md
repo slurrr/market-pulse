@@ -37,6 +37,26 @@ This repo is expected to be deleted.
 
 ---
 
+## Source Control Philosophy
+
+Use Git as a **scratchpad**, not a guardrail.
+
+- Commit early and often.
+- Small, messy commits are fine.
+- Breaking things is fine.
+- Rewriting history is fine.
+- Deleting large sections of code is encouraged.
+
+Do not:
+- Preserve code “just in case”
+- Avoid changes because of git history
+- Treat commits as permanent decisions
+
+If something feels wrong, delete it and move on.
+Git exists so you can be fearless.
+
+---
+
 ## Artifact Discipline (Critical)
 
 Artifacts exist to preserve **learning**, not structure.
