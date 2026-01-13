@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MARKET PULSE v0.6 - SITUATIONAL AWARENESS</title>
+    <style>
+        :root {
+            --bg: #030303;
+            --panel-bg: #090909;
+            --text-main: #f0f0f0;
+            --text-dim: #555;
+            --text-dark: #222;
+
+            --accent-green: #00ff41;
+            --accent-red: #ff003c;
+            --accent-yellow: #fcee0a;
+            --accent-blue: #00f0ff;
+            --accent-purple: #bd00ff;
+
+            --grid-color: #1a1a1a;
+        }
+
+        @keyframes pulse-red {
+            0% {
+                box-shadow: 0 0 0px var(--accent-red);
+            }
+
+            50% {
+                box-shadow: 0 0 15px var(--accent-red);
+            }
+
+            100% {
+                box-shadow: 0 0 0px var(--accent-red);
+            }
+        }
+
+        @keyframes pulse-green {
+            0% {
+                box-shadow: 0 0 0px var(--accent-green);
+            }
+
+            50% {
+                box-shadow: 0 0 15px var(--accent-green);
+            }
+
+            100% {
+                box-shadow: 0 0 0px var(--accent-green);
+            }
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text-main);
+            font-family: 'JetBrains Mono', 'Roboto Mono', monospace;
+            margin: 0;
+            padding: 8px;
+            height: 100vh;
+            overflow: hidden;
+            display: grid;
+            grid-template-rows: 50px 1fr;
+            gap: 8px;
+        }
+
+        /* HEADER */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 15px;
+            background: var(--panel-bg);
+            border: 1px solid var(--grid-color);
+            border-bottom: 2px solid #222;
+            transition: all 0.3s;
+        }
+
+        header.pulse-up {
+            animation: pulse-green 1s infinite;
+            border-color: var(--accent-green);
+        }
+
+        header.pulse-down {
+            animation: pulse-red 1s infinite;
+            border-color: var(--accent-red);
+        }
+
+        .system-status {
+            font-size: 0.7rem;
+            color: var(--text-dim);
+        }
+
+        .main-regime {
+            font-size: 1.6rem;
+            font-weight: 900;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        /* GRID */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 320px 1fr 320px;
+            grid-template-rows: 1fr 1fr;
+            gap: 8px;
+            height: 100%;
+        }
+
+        /* PANELS */
+        .panel {
+            background: var(--panel-bg);
+            border: 1px solid var(--grid-color);
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .panel-header {
+            font-size: 0.7rem;
+            color: #444;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+            border-bottom: 1px solid #111;
+            padding-bottom: 4px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        /* TYPOGRAPHY */
+        .val-huge {
+            font-size: 2.8rem;
+            font-weight: 800;
+            line-height: 0.9;
+            letter-spacing: -2px;
+        }
+
+        .val-big {
+            font-size: 1.8rem;
+            font-weight: 700;
+            line-height: 1;
+        }
+
+        .val-norm {
+            font-size: 0.95rem;
+            font-weight: 500;
+        }
+
+        .lbl {
+            font-size: 0.65rem;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .c-up {
+            color: var(--accent-green);
+        }
+
+        .c-down {
+            color: var(--accent-red);
+        }
+
+        .c-warn {
+            color: var(--accent-yellow);
+        }
+
+        .c-cool {
+            color: var(--accent-blue);
+        }
+
+        .c-wild {
+            color: var(--accent-purple);
+        }
+
+        /* VIZ */
+        .bar-container {
+            background: #111;
+            height: 4px;
+            width: 100%;
+            margin: 6px 0;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .bar-fill {
+            height: 100%;
+            transition: width 0.3s ease-out;
+        }
+
+        .kv-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: 3px;
+            font-size: 0.85rem;
+        }
+
+        .liq-score {
+            font-size: 1.2rem;
+            font-weight: 800;
+            text-align: center;
+            padding: 5px;
+            background: #111;
+            margin-top: 5px;
+        }
+
+        /* TAPE */
+        .tape-container {
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            font-size: 0.65rem;
+            opacity: 0.9;
+        }
+
+        .tape-row {
+            display: grid;
+            grid-template-columns: 35px 1fr 1fr;
+            margin-bottom: 2px;
+            border-bottom: 1px solid #0f0f0f;
+        }
+    </style>
+</head>
+
+<body>
+
+    <header id="main-header">
+        <div>
+            <span class="lbl" style="color: #444;">MARKET PULSE v0.6</span>
+            <span class="system-status" id="ws-status"> :: DISCONNECTED</span>
+        </div>
+        <div id="regime-banner" class="main-regime">INITIALIZING</div>
+        <div style="text-align: right;">
+            <div class="lbl">LOCAL</div>
+            <div id="clock" style="font-family: monospace;">--:--:--</div>
+        </div>
+    </header>
+
+    <div class="dashboard-grid">
+
+        <!-- COL 1: CORE STRUCTURE -->
+        <div class="panel" style="grid-row: 1 / 3;">
+            <div class="panel-header">CORE STATE (BTC)</div>
+
+            <div style="margin-bottom: 15px;">
+                <div class="lbl">PRICE</div>
+                <div id="btc-price" class="val-huge" style="transition: color 0.1s;">--,--</div>
+                <div class="kv-row" style="margin-top: 5px;">
+                    <span class="lbl">VEL (10s)</span>
+                    <span id="vel-val" class="val-norm">0.00</span>
+                </div>
+            </div>
+
+            <div class="bar-container">
+                <div id="vel-bar" class="bar-fill" style="width: 50%; background: #333;"></div>
+            </div>
+
+            <div style="margin-top: 15px;">
+                <div class="kv-row"><span class="lbl">1m Chg</span> <span id="chg-1m" class="val-norm">--</span></div>
+                <div class="kv-row"><span class="lbl">5m Chg</span> <span id="chg-5m" class="val-norm">--</span></div>
+                <div class="kv-row"><span class="lbl">15m Chg</span> <span id="chg-15m" class="val-norm">--</span></div>
+            </div>
+
+            <div style="margin: 20px 0; border-top: 1px dashed #222; padding-top: 10px; flex-grow: 1;">
+                <div class="panel-header">VOLATILITY (10m)</div>
+                <div class="kv-row"><span class="lbl">Range</span> <span id="vol-range" class="val-norm">--</span></div>
+                <div class="kv-row"><span class="lbl">Ticks</span> <span id="tick-vol" class="val-norm">--</span></div>
+
+                <div class="lbl" style="margin-top: 10px;">COMPRESSION INDEX</div>
+                <div class="bar-container" style="height: 8px;">
+                    <div id="vol-bar" class="bar-fill" style="width: 0%; background: var(--accent-blue);"></div>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                    <span class="lbl">EXPANDED</span>
+                    <span class="lbl">SQUEEZED</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- COL 2: SPOT VS PERP (CENTER TOP) -->
+        <div class="panel">
+            <div class="panel-header">SPOT LEADERSHIP & FUNDING</div>
+
+            <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                <div>
+                    <div class="lbl">FUNDING</div>
+                    <div id="funding-rate" class="val-big">0.00%</div>
+                </div>
+                <div style="text-align: right;">
+                    <div class="lbl">BASIS Δ</div>
+                    <div id="basis-diff" class="val-big">--</div>
+                </div>
+            </div>
+
+            <div style="background: #111; padding: 10px; border-radius: 4px;">
+                <div class="lbl" style="text-align: center; margin-bottom: 5px;">CVD DIVERGENCE (SPOT - PERP)</div>
+                <div id="cvd-diff" class="val-big" style="text-align: center;">0</div>
+                <div class="bar-container" style="background: #222; margin-top: 8px;">
+                    <div id="cvd-bar" class="bar-fill" style="width: 50%; margin: 0 auto; background: #555;"></div>
+                </div>
+                <div
+                    style="display: flex; justify-content: space-between; font-size: 0.7rem; color: #444; margin-top: 2px;">
+                    <span>PERP LED</span>
+                    <span>SPOT LED</span>
+                </div>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; margin-top: 10px;">
+                <div class="lbl">SPOT CVD: <span id="spot-cvd" style="color:#aaa;">0</span></div>
+                <div class="lbl">PERP CVD: <span id="perp-cvd" style="color:#aaa;">0</span></div>
+            </div>
+        </div>
+
+        <!-- COL 2: LIQUIDITY (CENTER BOTTOM) -->
+        <div class="panel">
+            <div class="panel-header">LIQUIDITY RESILIENCE</div>
+
+            <div class="kv-row">
+                <span class="lbl">BUY VOL (1m)</span>
+                <span id="buy-vol" class="c-up">--</span>
+            </div>
+            <div class="kv-row">
+                <span class="lbl">SELL VOL (1m)</span>
+                <span id="sell-vol" class="c-down">--</span>
+            </div>
+            <div class="bar-container" style="height: 8px; display: flex;">
+                <div id="agg-buy-bar" style="background: var(--accent-green); width: 50%;"></div>
+                <div id="agg-sell-bar" style="background: var(--accent-red); width: 50%;"></div>
+            </div>
+
+            <div style="margin-top: 15px; border-top: 1px solid #1a1a1a; padding-top: 10px;">
+                <div class="lbl" style="text-align: center;">COST OF MOVEMENT (SLIPPAGE PROXY)</div>
+                <div id="liq-score" class="liq-score" style="color: var(--accent-blue);">--</div>
+                <div class="lbl" style="text-align: center; margin-top: 2px;" id="liq-desc">CALCULATING...</div>
+            </div>
+        </div>
+
+        <!-- COL 3: ROTATION & TAPE -->
+        <div class="panel" style="grid-row: 1 / 3;">
+            <div class="panel-header">RELATIVE STRENGTH (vs BTC)</div>
+
+            <div style="margin: 10px 0;">
+                <div class="kv-row"><span class="lbl">ETH</span> <span id="eth-str" class="val-norm">0.00%</span></div>
+                <div class="kv-row"><span class="lbl">SOL</span> <span id="sol-str" class="val-norm">0.00%</span></div>
+                <div class="kv-row"><span class="lbl">BNB</span> <span id="bnb-str" class="val-norm">0.00%</span></div>
+            </div>
+
+            <div class="panel-header" style="margin-top: 20px;">WHALE TAPE (>50k)</div>
+            <div id="tape-list" class="tape-container" style="flex-grow: 1;">
+                <!-- JS -->
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // CONFIG
+        const WS_SPOT = 'wss://stream.binance.com:9443/stream?streams=btcusdt@trade/btcusdt@markPrice/ethusdt@trade/solusdt@trade';
+        const WS_FUTURE = 'wss://fstream.binance.com/ws/btcusdt@aggTrade';
+
+        // CLIENT STATE
+        const state = {
+            btc: { current: 0, last: 0, history: [], startPrice: 0 },
+            eth: { current: 0, last: 0, history: [] },
+            sol: { current: 0, last: 0, history: [] },
+            vol: { buy: 0, sell: 0 },
+            perp: { price: 0, buyVol: 0, sellVol: 0 },
+            startTime: Date.now()
+        };
+
+        const ui = {
+            header: document.getElementById('main-header'),
+            btcPrice: document.getElementById('btc-price'),
+            velVal: document.getElementById('vel-val'),
+            regime: document.getElementById('regime-banner'),
+            funding: document.getElementById('funding-rate'),
+            tape: document.getElementById('tape-list'),
+            buyVol: document.getElementById('buy-vol'),
+            sellVol: document.getElementById('sell-vol'),
+            barBuy: document.getElementById('agg-buy-bar'),
+            barSell: document.getElementById('agg-sell-bar'),
+            // Rotation
+            ethStr: document.getElementById('eth-str'),
+            solStr: document.getElementById('sol-str'),
+            bnbStr: document.getElementById('bnb-str'),
+            // Changes in Col 1
+            chg1m: document.getElementById('chg-1m'),
+            chg5m: document.getElementById('chg-5m'),
+            chg15m: document.getElementById('chg-15m'),
+            // Vol
+            volRange: document.getElementById('vol-range'),
+            tickVol: document.getElementById('tick-vol'),
+            volBar: document.getElementById('vol-bar'),
+            velBar: document.getElementById('vel-bar'),
+            // Spot vs Perp
+            basisDiff: document.getElementById('basis-diff'),
+            cvdDiff: document.getElementById('cvd-diff'),
+            cvdBar: document.getElementById('cvd-bar'),
+            spotCvd: document.getElementById('spot-cvd'),
+            perpCvd: document.getElementById('perp-cvd'),
+            // Liq
+            liqScore: document.getElementById('liq-score'),
+            liqDesc: document.getElementById('liq-desc'),
+            status: document.getElementById('ws-status'),
+            clock: document.getElementById('clock')
+        };
+
+        // CONNECTIONS
+        const wsSpot = new WebSocket(WS_SPOT);
+        const wsFut = new WebSocket(WS_FUTURE);
+
+        wsSpot.onopen = () => { ui.status.innerText = ":: ONLINE"; ui.status.style.color = "var(--accent-green)"; };
+        wsSpot.onmessage = (e) => {
+            const msg = JSON.parse(e.data);
+            if (msg.stream.includes('btcusdt@trade')) handleTrade('BTC', msg.data, state.btc);
+            if (msg.stream.includes('ethusdt@trade')) handleTrade('ETH', msg.data, state.eth);
+            if (msg.stream.includes('solusdt@trade')) handleTrade('SOL', msg.data, state.sol);
+            if (msg.stream.includes('markPrice')) handleFunding(msg.data);
+        };
+
+        wsFut.onmessage = (e) => {
+            const t = JSON.parse(e.data);
+            const price = parseFloat(t.p);
+            const qty = parseFloat(t.q);
+            const val = price * qty;
+            const isSell = t.m;
+
+            state.perp.price = price;
+            if (isSell) state.perp.sellVol += val;
+            else state.perp.buyVol += val;
+        };
+
+        function handleTrade(asset, t, assetState) {
+            const price = parseFloat(t.p);
+            const qty = parseFloat(t.q);
+            const val = price * qty;
+            const isSell = t.m;
+
+            if (assetState.current === 0) assetState.startPrice = price;
+            assetState.last = assetState.current;
+            assetState.current = price;
+
+            assetState.history.push({ t: Date.now(), p: price });
+
+            if (asset === 'BTC') {
+                if (isSell) state.vol.sell += val;
+                else state.vol.buy += val;
+
+                // Visual updates
+                ui.btcPrice.innerText = price.toFixed(2);
+                ui.btcPrice.style.color = price >= assetState.last ? 'var(--accent-green)' : 'var(--accent-red)';
+
+                if (val > 50000) addTape(t, val, isSell);
+            }
+        }
+
+        function handleFunding(d) {
+            const rate = parseFloat(d.r) * 100;
+            ui.funding.innerText = rate.toFixed(4) + '%';
+            ui.funding.className = rate > 0.01 ? 'val-big c-up' : (rate < 0 ? 'val-big c-down' : 'val-big');
+        }
+
+        function addTape(t, val, isSell) {
+            const row = document.createElement('div');
+            row.className = 'tape-row';
+            row.innerHTML = `
+                <span class="${isSell ? 'c-down' : 'c-up'}">${isSell ? 'SELL' : 'BUY'}</span>
+                <span>${parseFloat(t.p).toFixed(0)}</span>
+                <span>$${(val / 1000).toFixed(1)}k</span>
+            `;
+            ui.tape.prepend(row);
+            if (ui.tape.children.length > 28) ui.tape.lastElementChild.remove();
+        }
+
+        function getChange(assetState, ms) {
+            const now = Date.now();
+            if (assetState.history.length === 0) return 0;
+            const past = assetState.history.find(x => x.t >= now - ms);
+            const ref = past ? past : assetState.history[0];
+            if (!ref || ref.p === 0) return 0;
+            return ((assetState.current - ref.p) / ref.p) * 100;
+        }
+
+        // 1s TICKER
+        setInterval(() => {
+            const now = Date.now();
+            ui.clock.innerText = new Date().toLocaleTimeString();
+
+            // HISTORY PRUNING
+            ['btc', 'eth', 'sol'].forEach(k => {
+                // Keep 15 mins
+                state[k].history = state[k].history.filter(x => now - x.t < 900000);
+            });
+
+            // 1. VELOCITY & CHANGE
+            const btcPast10s = state.btc.history.find(x => x.t >= now - 10000);
+            let vel = 0;
+            if (btcPast10s) {
+                vel = state.btc.current - btcPast10s.p;
+                ui.velVal.innerText = vel.toFixed(2);
+                ui.velVal.className = vel > 0 ? 'val-norm c-up' : (vel < 0 ? 'val-norm c-down' : 'val-norm');
+
+                // Visual bar
+                const velPct = 50 + (Math.max(-50, Math.min(50, vel)) * 1);
+                ui.velBar.style.width = velPct + '%';
+                ui.velBar.style.background = vel > 0 ? 'var(--accent-green)' : 'var(--accent-red)';
+
+                // HEADER PULSE
+                ui.header.className = '';
+                if (vel > 25) ui.header.className = 'pulse-up';
+                if (vel < -25) ui.header.className = 'pulse-down';
+            }
+
+            const btc1m = getChange(state.btc, 60000);
+            ui.chg1m.innerText = btc1m > 0 ? `+${btc1m.toFixed(2)}%` : `${btc1m.toFixed(2)}%`;
+            ui.chg1m.className = btc1m > 0 ? 'val-norm c-up' : (btc1m < 0 ? 'val-norm c-down' : 'val-norm');
+            ui.chg5m.innerText = (getChange(state.btc, 300000)).toFixed(2) + '%';
+            ui.chg15m.innerText = (getChange(state.btc, 900000)).toFixed(2) + '%';
+
+            // 2. VOLATILITY & COMPRESSION
+            const recentHist = state.btc.history.filter(x => now - x.t < 600000); // 10m
+            if (recentHist.length > 0) {
+                const highs = recentHist.map(x => x.p);
+                const range = Math.max(...highs) - Math.min(...highs);
+                const rangePct = (range / state.btc.current) * 100;
+                ui.volRange.innerText = `$${range.toFixed(0)} (${rangePct.toFixed(2)}%)`;
+                ui.tickVol.innerText = recentHist.length;
+
+                let compIdx = Math.max(0, Math.min(100, (1 - (rangePct / 0.8)) * 100));
+                ui.volBar.style.width = compIdx + '%';
+                ui.volBar.style.background = compIdx > 80 ? 'var(--accent-yellow)' : 'var(--accent-blue)';
+            }
+
+            // 3. SPOT VS PERP
+            if (state.btc.current > 0 && state.perp.price > 0) {
+                const basis = state.perp.price - state.btc.current;
+                ui.basisDiff.innerText = basis.toFixed(2);
+                ui.basisDiff.className = basis > 0 ? 'val-big c-up' : 'val-big c-down';
+            }
+
+            // Decays
+            state.vol.buy *= 0.98; state.vol.sell *= 0.98;
+            state.perp.buyVol *= 0.98; state.perp.sellVol *= 0.98;
+
+            const spotDelta = state.vol.buy - state.vol.sell;
+            const perpDelta = state.perp.buyVol - state.perp.sellVol;
+            const deltaDiff = spotDelta - perpDelta;
+
+            ui.spotCvd.innerText = `$${(spotDelta / 1000).toFixed(0)}k`;
+            ui.perpCvd.innerText = `$${(perpDelta / 1000).toFixed(0)}k`;
+            ui.cvdDiff.innerText = `$${(deltaDiff / 1000).toFixed(0)}k`;
+            ui.cvdDiff.className = deltaDiff > 0 ? 'val-big c-up' : 'val-big c-down';
+
+            const maxDiff = 3000000;
+            const barPos = 50 + ((deltaDiff / maxDiff) * 50);
+            ui.cvdBar.style.width = Math.min(100, Math.max(0, barPos)) + '%';
+            ui.cvdBar.style.background = deltaDiff > 0 ? 'var(--accent-green)' : 'var(--accent-red)';
+
+            // 4. LIQUIDITY PROXY
+            const volTotal = state.vol.buy + state.vol.sell;
+            const absVel = Math.abs(vel);
+
+            let resScore = "---";
+            let resDesc = "WAITING";
+            let resColor = "#555";
+
+            if (volTotal > 50000 && absVel > 0.1) {
+                const ratio = volTotal / absVel;
+                const score = Math.min(100, Math.max(0, (ratio / 50000) * 50));
+
+                resScore = score.toFixed(0);
+                if (score > 80) { resDesc = "THICK / ABSORBING"; resColor = "var(--accent-blue)"; }
+                else if (score > 40) { resDesc = "NORMAL"; resColor = "var(--text-main)"; }
+                else { resDesc = "THIN / FRAGILE"; resColor = "var(--accent-red)"; }
+            } else if (volTotal > 50000 && absVel <= 0.1) {
+                resScore = "MAX"; resDesc = "ICEBERG DETECTED"; resColor = "var(--accent-purple)";
+            }
+
+            ui.liqScore.innerText = resScore;
+            ui.liqScore.style.color = resColor;
+            ui.liqDesc.innerText = resDesc;
+
+            // Update Vol Bars
+            const total = state.vol.buy + state.vol.sell;
+            if (total > 0) {
+                const bPct = (state.vol.buy / total) * 100;
+                ui.barBuy.style.width = bPct + '%';
+                ui.barSell.style.width = (100 - bPct) + '%';
+                ui.buyVol.innerText = `$${(state.vol.buy / 1000).toFixed(0)}k`;
+                ui.sellVol.innerText = `$${(state.vol.sell / 1000).toFixed(0)}k`;
+            }
+
+            // 5. RELATIVE STRENGTH & REGIME
+            const eth1m = getChange(state.eth, 60000);
+            const sol1m = getChange(state.sol, 60000);
+            const ethRel = eth1m - btc1m;
+            const solRel = sol1m - btc1m;
+
+            ui.ethStr.innerText = ethRel > 0 ? `+${ethRel.toFixed(3)}%` : `${ethRel.toFixed(3)}%`;
+            ui.ethStr.className = ethRel > 0.05 ? 'val-norm c-up' : (ethRel < -0.05 ? 'val-norm c-down' : 'val-norm');
+            ui.solStr.innerText = solRel > 0 ? `+${solRel.toFixed(3)}%` : `${solRel.toFixed(3)}%`;
+            ui.solStr.className = solRel > 0.05 ? 'val-norm c-up' : (solRel < -0.05 ? 'val-norm c-down' : 'val-norm');
+
+            let regime = "RANGE / CHOP";
+            if (Math.abs(btc1m) < 0.05) regime = "ACCUMULATION";
+            if (btc1m > 0.2) regime = "TREND UP";
+            if (btc1m < -0.2) regime = "TREND DOWN";
+
+            if (deltaDiff > 1500000 && btc1m < 0.1) regime = "ABSORPTION";
+            if (deltaDiff < -1500000 && btc1m > -0.1) regime = "DISTRIBUTION";
+
+            if (resDesc.includes("THIN")) regime += " [FRAGILE]";
+
+            ui.regime.innerText = regime;
+
+        }, 1000);
+
+    </script>
+</body>
+
+</html>
