@@ -57,6 +57,30 @@ Git exists so you can be fearless.
 
 ---
 
+## Work Modes
+
+This project operates in explicit modes.
+
+### ADDITIVE MODE (default)
+- Add new dimensions, lenses, or panels
+- Do not remove existing ones unless they are clearly broken
+- Depth is less important than breadth
+- Redundancy is acceptable
+
+### REDUCTION MODE (invoked explicitly)
+- Delete, merge, or collapse existing elements
+- No new features
+- Prefer calmness and legibility
+
+### AUDIT MODE (invoked explicitly)
+- No code changes
+- Assess feel, language, and usefulness only
+- Write observations, not fixes
+
+If a mode is not specified, assume ADDITIVE MODE.
+
+---
+
 ## Artifact Discipline (Critical)
 
 Artifacts exist to preserve **learning**, not structure.

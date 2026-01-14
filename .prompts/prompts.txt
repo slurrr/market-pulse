@@ -1,0 +1,57 @@
+Generic ADDITIVE MODE Builder Prompt
+
+Mode: ADDITIVE
+
+You are working on a throwaway-first market pulse dashboard.
+
+Your task is to add, not replace.
+
+Instructions:
+
+Read vision.md, README.md, dashboard_notes.md and decisions.md.
+
+Review the current dashboard implementation.
+
+Ask yourself:
+
+What important aspect of market state is not currently visible?
+
+Where would a human still need to infer across multiple sources?
+
+What additional lens could increase situational awareness without demanding action?
+
+Then:
+
+Add one or more new lenses, panels, or state indicators that move the dashboard closer to the vision.
+
+Prefer orthogonal dimensions over deeper treatment of existing ones.
+
+Redundancy is acceptable.
+
+Constraints:
+
+Do not remove existing panels or features unless they are non-functional or you have an idea better suited to fulfill the vision.
+
+Do not refactor for cleanliness or architecture.
+
+Do not optimize or finalize regimes.
+
+Guidance:
+
+This dashboard is observational, not prescriptive.
+
+Silence is acceptable; false positives are costly.
+
+Qualitative state labels are preferred over precise signals.
+
+Artifact discipline:
+
+When you add something meaningful, briefly document why it adds awareness.
+
+Focus on usefulness and feel, not correctness.
+
+Deliverable:
+
+An expanded dashboard that exposes additional aspects of market posture and tension.
+
+This repo is disposable. Be bold.
