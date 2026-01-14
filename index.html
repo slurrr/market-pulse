@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MARKET PULSE v0.8 - ORTHOGONAL STATE</title>
+    <title>MARKET PULSE v0.10 - SITUATIONAL AWARENESS</title>
     <style>
         :root {
             --bg: #050505;
@@ -107,7 +107,7 @@
             display: grid;
             grid-template-columns: 1fr 1fr 1fr 1fr;
             /* 4 Columns */
-            grid-template-rows: 1fr 1fr;
+            grid-template-rows: 1fr 1fr 0.8fr;
             gap: 4px;
             height: 100%;
         }
@@ -279,7 +279,7 @@
 
     <header id="main-header">
         <div>
-            <span class="lbl" style="color: #666;">MARKET PULSE v0.8</span>
+            <span class="lbl" style="color: #666;">MARKET PULSE v0.10</span>
             <span class="lbl" id="ws-status"> :: DISCONNECTED</span>
         </div>
         <div id="regime-banner" class="main-regime">INITIALIZING</div>
@@ -461,6 +461,72 @@
             </div>
         </div>
 
+        <!-- ROW 3: NEW ORTHOGONAL DIMENSIONS -->
+
+        <!-- SESSION CONTEXT: Time awareness -->
+        <div class="panel">
+            <div class="panel-header">SESSION CONTEXT</div>
+            <div class="kv-row"><span class="lbl">SESSION AGE</span> <span id="session-age" class="val-norm">0m</span>
+            </div>
+            <div class="kv-row"><span class="lbl">TRADES SEEN</span> <span id="trades-seen" class="val-norm">0</span>
+            </div>
+            <div class="kv-row"><span class="lbl">REGIME DURATION</span> <span id="regime-duration"
+                    class="val-norm">0s</span></div>
+            <div style="margin-top: 8px;">
+                <div class="lbl">SESSION TREND</div>
+                <div id="session-trend" class="val-norm" style="color: var(--text-dim);">INITIALIZING</div>
+            </div>
+        </div>
+
+        <!-- MOMENTUM HEALTH: Exhaustion detection -->
+        <div class="panel">
+            <div class="panel-header">MOMENTUM HEALTH</div>
+            <div class="lbl">ACCEL vs VELOCITY</div>
+            <div style="display: flex; justify-content: space-between; margin-top: 4px;">
+                <div><span class="lbl">VEL</span> <span id="mom-vel" class="val-norm">0</span></div>
+                <div><span class="lbl">ACC</span> <span id="mom-acc" class="val-norm">0</span></div>
+            </div>
+            <div class="bar-container" style="height: 6px; margin-top: 6px;">
+                <div id="mom-bar" class="bar-fill" style="width: 50%; background: #444;"></div>
+            </div>
+            <div style="margin-top: 10px;">
+                <div id="mom-state" class="val-big" style="color: var(--text-dim);">STEADY</div>
+                <div class="lbl">MOMENTUM STATE</div>
+            </div>
+        </div>
+
+        <!-- AGGRESSION EFFICIENCY: Delta → Price translation -->
+        <div class="panel">
+            <div class="panel-header">AGGRESSION EFFICIENCY</div>
+            <div class="lbl">EFFORT → RESULT RATIO</div>
+            <div style="display: flex; justify-content: space-between; margin-top: 4px;">
+                <div><span class="lbl">Δ</span> <span id="agg-delta" class="val-norm">0</span></div>
+                <div><span class="lbl">Δ$</span> <span id="agg-price" class="val-norm">0</span></div>
+            </div>
+            <div style="margin-top: 8px;">
+                <div id="eff-ratio" class="val-big" style="color: var(--text-dim);">--</div>
+                <div class="lbl">EFFICIENCY</div>
+            </div>
+            <div id="eff-state" class="lbl" style="margin-top: 4px; color: #555;">waiting...</div>
+        </div>
+
+        <!-- MARKET TENSION: Conflicting signals -->
+        <div class="panel">
+            <div class="panel-header">MARKET TENSION</div>
+            <div class="lbl">SIGNAL AGREEMENT</div>
+            <div class="bar-container" style="height: 8px; margin-top: 6px;">
+                <div id="tension-bar" class="bar-fill" style="width: 50%; background: var(--accent-yellow);"></div>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 0.6rem; color: #444;">
+                <span>CONFLICT</span>
+                <span>ALIGNED</span>
+            </div>
+            <div style="margin-top: 8px;">
+                <div id="tension-state" class="val-big" style="color: var(--accent-yellow);">UNCLEAR</div>
+            </div>
+            <div id="tension-detail" class="lbl" style="color: #555; margin-top: 2px;">analyzing...</div>
+        </div>
+
     </div>
 
     <script>
@@ -482,7 +548,18 @@
             lastHighVelEvent: null, // { time, price, dir }
             vwap: { sumProd: 0, sumVol: 0 },
             walls: {}, // price -> accumulated volume
-            history: { btc: [], eth: [] } // For correlation (1s snapshots)
+            history: { btc: [], eth: [] }, // For correlation (1s snapshots)
+            // NEW: Session context
+            session: {
+                startTime: Date.now(),
+                tradeCount: 0,
+                lastRegime: 'INITIALIZING',
+                regimeChangeTime: Date.now()
+            },
+            // NEW: Momentum tracking (velocity history)
+            velHistory: [], // {t, v} array for acceleration calc
+            // NEW: Aggression efficiency (rolling window)
+            effWindow: { delta: 0, priceChg: 0, startPrice: 0, startDelta: 0 }
         };
 
         const ui = {
@@ -518,7 +595,6 @@
             whaleDom: document.getElementById('whale-dom-val'),
             whaleBar: document.getElementById('whale-bar'),
             liqQual: document.getElementById('liq-quality'),
-            liqQual: document.getElementById('liq-quality'),
             // Rel Strength
             ethStr: document.getElementById('eth-str'),
             solStr: document.getElementById('sol-str'),
@@ -528,7 +604,26 @@
             vwapVal: document.getElementById('vwap-val'),
             vwapDelta: document.getElementById('vwap-delta'),
             trendRegime: document.getElementById('trend-regime'),
-            tape: document.getElementById('tape-list')
+            tape: document.getElementById('tape-list'),
+            // NEW: Session Context
+            sessionAge: document.getElementById('session-age'),
+            tradesSeen: document.getElementById('trades-seen'),
+            regimeDuration: document.getElementById('regime-duration'),
+            sessionTrend: document.getElementById('session-trend'),
+            // NEW: Momentum Health
+            momVel: document.getElementById('mom-vel'),
+            momAcc: document.getElementById('mom-acc'),
+            momBar: document.getElementById('mom-bar'),
+            momState: document.getElementById('mom-state'),
+            // NEW: Aggression Efficiency
+            aggDelta: document.getElementById('agg-delta'),
+            aggPrice: document.getElementById('agg-price'),
+            effRatio: document.getElementById('eff-ratio'),
+            effState: document.getElementById('eff-state'),
+            // NEW: Market Tension
+            tensionBar: document.getElementById('tension-bar'),
+            tensionState: document.getElementById('tension-state'),
+            tensionDetail: document.getElementById('tension-detail')
         };
 
         // CONNECT
@@ -593,6 +688,9 @@
             state.vol.total += val;
             if (isSell) { state.vol.sell += val; state.cvd -= val; }
             else { state.vol.buy += val; state.cvd += val; }
+
+            // Trade count for session context
+            state.session.tradeCount++;
 
             if (val > 50000) {
                 state.vol.whale += val;
@@ -966,6 +1064,214 @@
                     ui.bnbStr.className = bnbRel > 0.1 ? 'val-norm c-up' : (bnbRel < -0.1 ? 'val-norm c-down' : 'val-norm');
                 }
 
+            }
+
+            // Track regime changes for duration
+            if (regTxt !== state.session.lastRegime) {
+                state.session.lastRegime = regTxt;
+                state.session.regimeChangeTime = now;
+            }
+
+            // =============================================
+            // NEW PANEL LOGIC (Row 3)
+            // =============================================
+
+            // 8. SESSION CONTEXT
+            const sessionAgeMs = now - state.session.startTime;
+            const sessionAgeMins = Math.floor(sessionAgeMs / 60000);
+            const sessionAgeHours = Math.floor(sessionAgeMins / 60);
+
+            if (sessionAgeHours > 0) {
+                ui.sessionAge.innerText = sessionAgeHours + 'h ' + (sessionAgeMins % 60) + 'm';
+            } else {
+                ui.sessionAge.innerText = sessionAgeMins + 'm';
+            }
+
+            ui.tradesSeen.innerText = state.session.tradeCount.toLocaleString();
+
+            const regimeDurMs = now - state.session.regimeChangeTime;
+            const regimeDurSec = Math.floor(regimeDurMs / 1000);
+            const regimeDurMin = Math.floor(regimeDurSec / 60);
+            if (regimeDurMin > 0) {
+                ui.regimeDuration.innerText = regimeDurMin + 'm ' + (regimeDurSec % 60) + 's';
+            } else {
+                ui.regimeDuration.innerText = regimeDurSec + 's';
+            }
+
+            // Session trend: compare current to start
+            const sessionChgPct = ((pNow - state.btc.startPrice) / state.btc.startPrice) * 100;
+            if (Math.abs(sessionChgPct) < 0.1) {
+                ui.sessionTrend.innerText = 'FLAT (' + sessionChgPct.toFixed(2) + '%)';
+                ui.sessionTrend.style.color = 'var(--text-dim)';
+            } else if (sessionChgPct > 0) {
+                ui.sessionTrend.innerText = 'UP ' + sessionChgPct.toFixed(2) + '%';
+                ui.sessionTrend.style.color = 'var(--accent-green)';
+            } else {
+                ui.sessionTrend.innerText = 'DOWN ' + sessionChgPct.toFixed(2) + '%';
+                ui.sessionTrend.style.color = 'var(--accent-red)';
+            }
+
+            // 9. MOMENTUM HEALTH (Exhaustion Detection)
+            // Store velocity history for acceleration
+            state.velHistory.push({ t: now, v: vel });
+            state.velHistory = state.velHistory.filter(x => now - x.t < 30000); // 30s window
+
+            ui.momVel.innerText = vel.toFixed(1);
+            ui.momVel.style.color = vel > 0 ? 'var(--accent-green)' : 'var(--accent-red)';
+
+            // Calc acceleration: delta of velocity over last 5s
+            let acc = 0;
+            const recentVel = state.velHistory.filter(x => now - x.t < 5000);
+            const olderVel = state.velHistory.filter(x => now - x.t >= 5000 && now - x.t < 10000);
+            if (recentVel.length > 0 && olderVel.length > 0) {
+                const avgRecent = recentVel.reduce((a, b) => a + b.v, 0) / recentVel.length;
+                const avgOlder = olderVel.reduce((a, b) => a + b.v, 0) / olderVel.length;
+                acc = avgRecent - avgOlder;
+            }
+
+            ui.momAcc.innerText = acc.toFixed(1);
+            ui.momAcc.style.color = acc > 0 ? 'var(--accent-green)' : 'var(--accent-red)';
+
+            // Momentum state heuristic
+            let momState = 'STEADY';
+            let momCol = 'var(--text-dim)';
+            let momBarPct = 50;
+
+            if (Math.abs(vel) > 15) { // Only care if there's movement
+                if ((vel > 0 && acc > 5) || (vel < 0 && acc < -5)) {
+                    momState = 'ACCELERATING';
+                    momCol = vel > 0 ? 'var(--accent-green)' : 'var(--accent-red)';
+                    momBarPct = vel > 0 ? 80 : 20;
+                } else if ((vel > 0 && acc < -3) || (vel < 0 && acc > 3)) {
+                    momState = 'EXHAUSTING';
+                    momCol = 'var(--accent-yellow)';
+                    momBarPct = 50;
+                } else {
+                    momState = 'CRUISING';
+                    momCol = 'var(--text-main)';
+                    momBarPct = vel > 0 ? 65 : 35;
+                }
+            }
+
+            ui.momState.innerText = momState;
+            ui.momState.style.color = momCol;
+            ui.momBar.style.width = momBarPct + '%';
+            ui.momBar.style.background = momCol;
+
+            // 10. AGGRESSION EFFICIENCY
+            // How well does delta (CVD) translate to price movement?
+            // Rolling window: reset every 60s or when direction changes
+            const effWindowAge = now - (state.effWindow.startTime || state.session.startTime);
+
+            if (effWindowAge > 60000 || !state.effWindow.startTime) {
+                // Reset window
+                state.effWindow.startTime = now;
+                state.effWindow.startPrice = pNow;
+                state.effWindow.startDelta = state.cvd;
+            }
+
+            const windowDelta = state.cvd - state.effWindow.startDelta;
+            const windowPriceChg = pNow - state.effWindow.startPrice;
+
+            ui.aggDelta.innerText = (windowDelta / 1000).toFixed(0) + 'k';
+            ui.aggPrice.innerText = windowPriceChg.toFixed(0);
+
+            // Efficiency = price movement per unit of CVD
+            // If delta is pushing but price isn't moving = low efficiency (absorption)
+            let effLabel = '--';
+            let effCol = 'var(--text-dim)';
+            let effStateText = 'measuring...';
+
+            if (Math.abs(windowDelta) > 100000) { // Need minimum delta to measure
+                const effRatio = Math.abs(windowPriceChg) / (Math.abs(windowDelta) / 1000000);
+
+                if (effRatio > 50) {
+                    effLabel = 'HIGH';
+                    effCol = 'var(--accent-green)';
+                    effStateText = 'Price moving easily';
+                } else if (effRatio > 20) {
+                    effLabel = 'NORMAL';
+                    effCol = 'var(--text-main)';
+                    effStateText = 'Balanced translation';
+                } else if (effRatio > 5) {
+                    effLabel = 'LOW';
+                    effCol = 'var(--accent-yellow)';
+                    effStateText = 'Resistance detected';
+                } else {
+                    effLabel = 'ABSORBED';
+                    effCol = 'var(--accent-red)';
+                    effStateText = 'Hidden wall likely';
+                }
+            }
+
+            ui.effRatio.innerText = effLabel;
+            ui.effRatio.style.color = effCol;
+            ui.effState.innerText = effStateText;
+            ui.effState.style.color = effCol;
+
+            // 11. MARKET TENSION (Signal Conflict)
+            // Compare multiple signals for agreement/disagreement
+            let tensions = [];
+            let agreementScore = 0;
+
+            // Signal 1: Velocity vs 15m trend (short vs medium term)
+            const velDir = vel > 5 ? 1 : (vel < -5 ? -1 : 0);
+            const trendDir = chg15 > 0.1 ? 1 : (chg15 < -0.1 ? -1 : 0);
+            if (velDir !== 0 && trendDir !== 0) {
+                if (velDir === trendDir) agreementScore += 1;
+                else { agreementScore -= 1; tensions.push('Vel↔Trend'); }
+            }
+
+            // Signal 2: CVD direction vs Price direction
+            const cvdDir = state.cvd > 500000 ? 1 : (state.cvd < -500000 ? -1 : 0);
+            const priceDir = pNow > state.btc.startPrice + 20 ? 1 : (pNow < state.btc.startPrice - 20 ? -1 : 0);
+            if (cvdDir !== 0 && priceDir !== 0) {
+                if (cvdDir === priceDir) agreementScore += 1;
+                else { agreementScore -= 1; tensions.push('CVD↔Price'); }
+            }
+
+            // Signal 3: Spot vs Perp leadership
+            const spotLead = spotDelta > perpDelta + 100000;
+            const perpLead = perpDelta > spotDelta + 100000;
+            if ((spotLead && priceDir > 0) || (perpLead && priceDir < 0)) {
+                agreementScore += 1;
+            } else if ((perpLead && priceDir > 0) || (spotLead && priceDir < 0)) {
+                agreementScore -= 0.5;
+                tensions.push('Spot↔Perp');
+            }
+
+            // Signal 4: Momentum state vs velocity
+            if (momState === 'EXHAUSTING' && Math.abs(vel) > 15) {
+                agreementScore -= 1;
+                tensions.push('Momentum Fade');
+            }
+
+            // Normalize to 0-100 bar
+            const tensionBarPct = Math.max(0, Math.min(100, 50 + (agreementScore * 15)));
+            ui.tensionBar.style.width = tensionBarPct + '%';
+
+            let tensionState = 'UNCLEAR';
+            let tensionCol = 'var(--accent-yellow)';
+
+            if (agreementScore >= 2) {
+                tensionState = 'ALIGNED';
+                tensionCol = 'var(--accent-green)';
+            } else if (agreementScore <= -1) {
+                tensionState = 'CONFLICT';
+                tensionCol = 'var(--accent-red)';
+            } else if (tensions.length > 0) {
+                tensionState = 'MIXED';
+                tensionCol = 'var(--accent-yellow)';
+            }
+
+            ui.tensionState.innerText = tensionState;
+            ui.tensionState.style.color = tensionCol;
+            ui.tensionBar.style.background = tensionCol;
+
+            if (tensions.length > 0) {
+                ui.tensionDetail.innerText = tensions.join(' | ');
+            } else {
+                ui.tensionDetail.innerText = agreementScore >= 2 ? 'Signals coherent' : 'No strong conflicts';
             }
 
         }, 1000);

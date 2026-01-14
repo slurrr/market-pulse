@@ -1,5 +1,15 @@
 # Dashboard Notes
 
+## v0.10 Observations (Situational Awareness Expansion)
+- **New Lens**: **Session Context**.
+    - *Why*: Knowing SESSION AGE, TRADES SEEN, and REGIME DURATION provides temporal grounding. "This impulse has been running 3m" vs "This is minute 1" changes interpretation.
+- **New Lens**: **Momentum Health**.
+    - *Why*: Velocity alone doesn't tell exhaustion. Comparing Acceleration (rate of velocity change) detects: ACCELERATING (healthy impulse), CRUISING (steady), or EXHAUSTING (decelerating momentum = reversal warning).
+- **New Lens**: **Aggression Efficiency**.
+    - *Why*: (from vision §4) "How much volume is required to move price?" If CVD is stacking but price isn't moving → hidden absorption. Labels: HIGH (free movement), NORMAL, LOW (resistance), ABSORBED (wall).
+- **New Lens**: **Market Tension**.
+    - *Why*: (from vision §Success) "Highlights contradictions, tensions, and unresolved market states." Compares Vel↔Trend, CVD↔Price, Spot↔Perp, Momentum state. Shows ALIGNED (coherent) vs CONFLICT (disagreement) vs MIXED.
+
 ## v0.9 Observations (Structural & Cohesion Expansion)
 - **New Lens**: **Session VWAP**.
     - *Why*: Provides a "fair value" anchor. Price > VWAP = Bullish Regime. Distance from VWAP = Extension.
